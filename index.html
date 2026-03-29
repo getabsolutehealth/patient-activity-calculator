@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patient Activity Counter</title>
+<style>
+  :root {
+    --font:      -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --teal:      #0a7a5e;
+    --teal-light:#f0faf7;
+    --teal-mid:  #b2e8db;
+    --green:     #0a7a5e;
+    --red:       #c82020;
+    --amber:     #b86a00;
+    --blue:      #1a56a0;
+    --pos:       #0a7a5e;
+    --neg:       #c82020;
+    --ink:       #0a0a0a;
+    --ink-soft:  #555;
+    --muted:     #999;
+    --border:    #ebebeb;
+    --bg:        #f7f7f7;
+    --white:     #fff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .wordmark {
+    font-size: 0.8rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+  }
+
+  .badge {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--teal-light); border: 1px solid var(--teal-mid);
+    padding: 5px 12px; border-radius: 20px;
+    font-size: 0.62rem; font-weight: 600;
+    letter-spacing: 0.07em; text-transform: uppercase; color: var(--teal);
+  }
+
+  .badge-dot { width: 6px; height: 6px; background: var(--teal); border-radius: 50%; animation: blink 2.5s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .wrap { max-width: 700px; margin: 0 auto; padding: 52px 20px 80px; }
+
+  .hero { margin-bottom: 44px; }
+
+  .eyebrow {
+    font-size: 0.62rem; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--teal); margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: 2.6rem; font-weight: 700;
+    letter-spacing: -0.03em; line-height: 1.05;
+    color: var(--ink); margin-bottom: 12px;
+  }
+
+  .hero p { font-size: 0.9rem; color: var(--ink-soft); line-height: 1.7; max-width: 460px; }
+
+  /* Upload */
+  .upload-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+
+  .upload-card {
+    background: var(--white); border: 1.5px dashed var(--border);
+    border-radius: 12px; padding: 22px 18px; cursor: pointer;
+    transition: all 0.18s; position: relative; overflow: hidden; display: block;
+  }
+
+  .upload-card input[type="file"] { display: none; }
+  .upload-card:hover { border-color: var(--teal); background: var(--teal-light); }
+  .upload-card.loaded { border-style: solid; border-color: var(--teal); background: var(--teal-light); cursor: default; }
+  .upload-card.loaded::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--teal); }
+
+  .card-step { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .card-icon  { font-size: 1.3rem; margin-bottom: 8px; display: block; }
+  .card-title { font-size: 0.88rem; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+  .card-sub   { font-size: 0.73rem; color: var(--muted); }
+  .card-ok    { font-size: 0.73rem; font-weight: 600; color: var(--teal); margin-top: 8px; display: none; }
+
+  .col-pickers { margin-top: 12px; display: none; flex-direction: column; gap: 7px; }
+  .col-pickers label { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 3px; }
+
+  .col-select {
+    width: 100%; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: 7px;
+    font-family: var(--font); font-size: 0.8rem;
+    background: var(--white); color: var(--ink); cursor: pointer;
+  }
+
+  .run-btn {
+    width: 100%; padding: 15px;
+    background: var(--ink); color: var(--white);
+    border: none; border-radius: 10px;
+    font-family: var(--font); font-size: 0.88rem; font-weight: 600;
+    letter-spacing: 0.02em; cursor: pointer; transition: all 0.18s;
+  }
+
+  .run-btn:hover:not(:disabled) { background: var(--teal); box-shadow: 0 4px 16px rgba(10,122,94,0.25); transform: translateY(-1px); }
+  .run-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+
+  /* Results */
+  #results { display: none; margin-top: 48px; animation: up 0.35s ease; }
+  @keyframes up { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .section-rule { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .section-rule span { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .section-rule::before, .section-rule::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ── Top stat row: 3 cols ── */
+  .stat-row-top {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 2px; margin-bottom: 2px;
+    background: var(--border); border-radius: 14px 14px 0 0; overflow: hidden;
+  }
+
+  /* ── Bottom stat row: 2 cols ── */
+  .stat-row-bot {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 2px; margin-bottom: 20px;
+    background: var(--border); border-radius: 0 0 14px 14px; overflow: hidden;
+  }
+
+  .stat-card { background: var(--white); padding: 22px 16px; }
+
+  .stat-val {
+    font-size: 2.4rem; font-weight: 700;
+    letter-spacing: -0.04em; line-height: 1; margin-bottom: 6px;
+  }
+
+  .stat-val.g  { color: var(--green); }
+  .stat-val.r  { color: var(--red); }
+  .stat-val.a  { color: var(--amber); }
+  .stat-val.b  { color: var(--blue); }
+  .stat-val.pos { color: var(--pos); }
+  .stat-val.neg { color: var(--neg); }
+
+  .stat-lbl { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .stat-sub { font-size: 0.68rem; color: #bbb; margin-top: 2px; }
+
+  /* Export panels */
+  .export-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+  .export-panel { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+  .ep-head { padding: 13px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; justify-content: space-between; }
+  .ep-title { font-size: 0.78rem; font-weight: 600; color: var(--ink); }
+  .ep-count { font-size: 0.62rem; color: var(--muted); }
+
+  .ep-list { max-height: 180px; overflow-y: auto; }
+  .ep-list::-webkit-scrollbar { width: 3px; }
+  .ep-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .ep-item { display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-bottom: 1px solid #f5f5f5; font-size: 0.76rem; color: #333; }
+  .ep-item:last-child { border-bottom: none; }
+  .ep-idx { font-size: 0.58rem; color: #ccc; min-width: 16px; font-weight: 600; }
+  .ep-empty { padding: 16px 14px; text-align: center; font-size: 0.76rem; color: #ccc; font-style: italic; }
+
+  .ep-foot { padding: 10px; border-top: 1px solid var(--border); }
+
+  .ep-dl {
+    width: 100%; padding: 8px 10px;
+    border-radius: 7px; font-family: var(--font);
+    font-size: 0.74rem; font-weight: 600; cursor: pointer;
+    background: transparent; transition: all 0.15s;
+  }
+
+  .ep-dl.g { border: 1.5px solid var(--teal);  color: var(--teal); }
+  .ep-dl.g:hover { background: var(--teal); color: var(--white); }
+  .ep-dl.r { border: 1.5px solid var(--red);   color: var(--red); }
+  .ep-dl.r:hover { background: var(--red); color: var(--white); }
+  .ep-dl.b { border: 1.5px solid var(--blue);  color: var(--blue); }
+  .ep-dl.b:hover { background: var(--blue); color: var(--white); }
+
+  .reset-wrap { margin-top: 18px; text-align: center; }
+  .reset-btn {
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 20px; font-family: var(--font);
+    font-size: 0.78rem; color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .reset-btn:hover { background: var(--border); color: var(--ink); }
+
+  .footer { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); text-align: center; font-size: 0.7rem; color: #bbb; line-height: 1.8; }
+  .footer strong { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--teal); }
+
+  @media (max-width: 560px) {
+    header { padding: 14px 18px; }
+    .wrap { padding: 36px 16px 60px; }
+    h1 { font-size: 2rem; }
+    .upload-row { grid-template-columns: 1fr; }
+    .stat-row-top, .stat-row-bot { grid-template-columns: 1fr; background: none; gap: 8px; border-radius: 0; }
+    .stat-card { border-radius: 10px !important; border: 1px solid var(--border); }
+    .export-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">Absolute Chiropractic</div>
+  <div class="badge"><span class="badge-dot"></span>Local Only</div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow">Practice Analytics</div>
+    <h1>Patient Activity<br>Counter</h1>
+    <p>Upload two monthly adjustment exports to track active patients, inactives, new conversions, churn rate, and net momentum — with one-click CSV downloads. Nothing leaves your browser.</p>
+  </div>
+
+  <div class="upload-row">
+
+    <label class="upload-card" id="card1" for="file1">
+      <input type="file" id="file1" accept=".csv">
+      <span class="card-icon" id="icon1">📂</span>
+      <div class="card-step">Step 1 · Prior Month</div>
+      <div class="card-title" id="title1">Select CSV file</div>
+      <div class="card-sub"   id="sub1">e.g. February report</div>
+      <div class="card-ok"    id="ok1"></div>
+      <div class="col-pickers" id="pickers1">
+        <div><label>First Name column</label><select class="col-select" id="fn1"></select></div>
+        <div><label>Last Name column</label><select class="col-select" id="ln1"></select></div>
+      </div>
+    </label>
+
+    <label class="upload-card" id="card2" for="file2">
+      <input type="file" id="file2" accept=".csv">
+      <span class="card-icon" id="icon2">📂</span>
+      <div class="card-step">Step 2 · Current Month</div>
+      <div class="card-title" id="title2">Select CSV file</div>
+      <div class="card-sub"   id="sub2">e.g. March report</div>
+      <div class="card-ok"    id="ok2"></div>
+      <div class="col-pickers" id="pickers2">
+        <div><label>First Name column</label><select class="col-select" id="fn2"></select></div>
+        <div><label>Last Name column</label><select class="col-select" id="ln2"></select></div>
+      </div>
+    </label>
+
+  </div>
+
+  <button class="run-btn" id="runBtn" disabled>Run Analysis →</button>
+
+  <div id="results">
+
+    <div class="section-rule"><span>Results</span></div>
+
+    <!-- Row 1: Active · Inactive · Churn -->
+    <div class="stat-row-top">
+      <div class="stat-card">
+        <div class="stat-val g" id="valActive">—</div>
+        <div class="stat-lbl">Active Patients</div>
+        <div class="stat-sub">Adjusted this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val r" id="valInactive">—</div>
+        <div class="stat-lbl">Inactive Patients</div>
+        <div class="stat-sub">Not seen this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val a" id="valChurn">—</div>
+        <div class="stat-lbl">Churn Rate</div>
+        <div class="stat-sub">Inactive ÷ prior total</div>
+      </div>
+    </div>
+
+    <!-- Row 2: New Conversions · Net Momentum -->
+    <div class="stat-row-bot">
+      <div class="stat-card">
+        <div class="stat-val b" id="valNew">—</div>
+        <div class="stat-lbl">New Conversions</div>
+        <div class="stat-sub">In current, not in prior</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="valMomentum">—</div>
+        <div class="stat-lbl">Net Momentum</div>
+        <div class="stat-sub">New conversions − inactives</div>
+      </div>
+    </div>
+
+    <!-- Export panels: Active · New · Inactive -->
+    <div class="export-row">
+
+      <div class="export-panel">
+        <div class="ep-head">
+          <div class="ep-title">Active Patients</div>
+          <div class="ep-count" id="cntActive"></div>
+        </div>
+        <div class="ep-list" id="listActive"></div>
+        <div class="ep-foot"><button class="ep-dl g" id="dlActive">↓ Active CSV</button></div>
+      </div>
+
+      <div class="export-panel">
+        <div class="ep-head">
+          <div class="ep-title">New Conversions</div>
+          <div class="ep-count" id="cntNew"></div>
+        </div>
+        <div class="ep-list" id="listNew"></div>
+        <div class="ep-foot"><button class="ep-dl b" id="dlNew">↓ New CSV</button></div>
+      </div>
+
+      <div class="export-panel">
+        <div class="ep-head">
+          <div class="ep-title">Inactive Patients</div>
+          <div class="ep-count" id="cntInactive"></div>
+        </div>
+        <div class="ep-list" id="listInactive"></div>
+        <div class="ep-foot"><button class="ep-dl r" id="dlInactive">↓ Inactive CSV</button></div>
+      </div>
+
+    </div>
+
+    <div class="reset-wrap">
+      <button class="reset-btn" id="resetBtn">↺ Start Over</button>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <strong>Zero Data Transmission</strong><br>
+    All processing runs in your browser. No patient data is ever transmitted or stored.
+  </div>
+
+</div>
+
+<script>
+  const FIRST_COL = 'First Name';
+  const LAST_COL  = 'Last Name';
+  const S = { f1: null, f2: null, activeRows: [], newRows: [], inactiveRows: [] };
+
+  function parseCSV(text) {
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) return { headers: [], rows: [] };
+    const split = line => {
+      const out = []; let cur = '', q = false;
+      for (const c of line) {
+        if (c === '"') q = !q;
+        else if (c === ',' && !q) { out.push(cur.trim()); cur = ''; }
+        else cur += c;
+      }
+      out.push(cur.trim()); return out;
+    };
+    return { headers: split(lines[0]), rows: lines.slice(1).map(split) };
+  }
+
+  function bestCol(headers, pref) {
+    return headers.find(h => h === pref)
+        || headers.find(h => h.toLowerCase() === pref.toLowerCase())
+        || headers[0] || '';
+  }
+
+  function fillSelect(id, headers, pref) {
+    const el = document.getElementById(id);
+    const sel = bestCol(headers, pref);
+    el.innerHTML = headers.map(h => `<option${h===sel?' selected':''}>${h}</option>`).join('');
+  }
+
+  function makeKey(f, l) { return `${f.trim().toLowerCase()}|${l.trim().toLowerCase()}`; }
+
+  function getPatients(data, fc, lc) {
+    const fi = data.headers.indexOf(fc), li = data.headers.indexOf(lc);
+    const m = new Map();
+    data.rows.forEach(r => {
+      const f = fi >= 0 ? (r[fi]||'').trim() : '';
+      const l = li >= 0 ? (r[li]||'').trim() : '';
+      if (!f && !l) return;
+      const k = makeKey(f, l);
+      if (!m.has(k)) m.set(k, { first: f, last: l });
+    });
+    return m;
+  }
+
+  function tc(s) { return s.replace(/\b\w/g, c => c.toUpperCase()); }
+  function byName(a, b) { return a.last.localeCompare(b.last) || a.first.localeCompare(b.first); }
+
+  function loadFile(input, n) {
+    const file = input.files[0]; if (!file) return;
+    const fr = new FileReader();
+    fr.onload = e => {
+      const data = parseCSV(e.target.result);
+      S['f'+n] = data;
+      fillSelect('fn'+n, data.headers, FIRST_COL);
+      fillSelect('ln'+n, data.headers, LAST_COL);
+      document.getElementById('icon'+n).textContent  = '✅';
+      document.getElementById('title'+n).textContent = file.name.replace(/\.csv$/i,'').replace(/_/g,' ');
+      document.getElementById('sub'+n).textContent   = data.rows.length + ' records';
+      const ok = document.getElementById('ok'+n);
+      ok.textContent = '✓ ' + data.rows.length + ' records loaded';
+      ok.style.display = 'block';
+      document.getElementById('pickers'+n).style.display = 'flex';
+      document.getElementById('card'+n).classList.add('loaded');
+      document.getElementById('runBtn').disabled = !(S.f1 && S.f2);
+    };
+    fr.readAsText(file);
+  }
+
+  document.querySelectorAll('.col-select').forEach(s => s.addEventListener('click', e => e.stopPropagation()));
+
+  document.getElementById('runBtn').addEventListener('click', () => {
+    const prior   = getPatients(S.f1, document.getElementById('fn1').value, document.getElementById('ln1').value);
+    const current = getPatients(S.f2, document.getElementById('fn2').value, document.getElementById('ln2').value);
+
+    // Active = in current month
+    S.activeRows = [...current.values()].sort(byName);
+
+    // Inactive = in prior, NOT in current
+    S.inactiveRows = [...prior.entries()]
+      .filter(([k]) => !current.has(k)).map(([,v]) => v).sort(byName);
+
+    // New conversions = in current, NOT in prior
+    S.newRows = [...current.entries()]
+      .filter(([k]) => !prior.has(k)).map(([,v]) => v).sort(byName);
+
+    const churn    = prior.size > 0 ? ((S.inactiveRows.length / prior.size) * 100).toFixed(1) + '%' : '—';
+    const momentum = S.newRows.length - S.inactiveRows.length;
+    const momStr   = momentum > 0 ? '+' + momentum : String(momentum);
+
+    document.getElementById('valActive').textContent   = current.size.toLocaleString();
+    document.getElementById('valInactive').textContent = S.inactiveRows.length.toLocaleString();
+    document.getElementById('valChurn').textContent    = churn;
+    document.getElementById('valNew').textContent      = S.newRows.length.toLocaleString();
+    document.getElementById('valMomentum').textContent = momStr;
+
+    // Color momentum dynamically
+    const momEl = document.getElementById('valMomentum');
+    momEl.className = 'stat-val ' + (momentum > 0 ? 'pos' : momentum < 0 ? 'neg' : 'a');
+
+    document.getElementById('cntActive').textContent   = current.size + ' patients';
+    document.getElementById('cntInactive').textContent = S.inactiveRows.length + ' patients';
+    document.getElementById('cntNew').textContent      = S.newRows.length + ' patients';
+
+    render('listActive',   S.activeRows);
+    render('listNew',      S.newRows);
+    render('listInactive', S.inactiveRows);
+
+    const el = document.getElementById('results');
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  function render(id, rows) {
+    document.getElementById(id).innerHTML = rows.length === 0
+      ? '<div class="ep-empty">No patients</div>'
+      : rows.map((p,i) => `<div class="ep-item"><span class="ep-idx">${i+1}</span>${tc(p.last)}, ${tc(p.first)}</div>`).join('');
+  }
+
+  function dlCSV(rows, prefix) {
+    const d = new Date().toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'}).replace(/\//g,'-');
+    const csv = ['"First Name","Last Name"', ...rows.map(p=>`"${tc(p.first)}","${tc(p.last)}"`)].join('\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+    a.download = `${prefix}_${d}.csv`;
+    a.click();
+  }
+
+  document.getElementById('dlActive').addEventListener('click',   () => dlCSV(S.activeRows,   'active_patients'));
+  document.getElementById('dlNew').addEventListener('click',      () => dlCSV(S.newRows,       'new_conversions'));
+  document.getElementById('dlInactive').addEventListener('click', () => dlCSV(S.inactiveRows,  'inactive_patients'));
+  document.getElementById('file1').addEventListener('change', e => loadFile(e.target, 1));
+  document.getElementById('file2').addEventListener('change', e => loadFile(e.target, 2));
+  document.getElementById('resetBtn').addEventListener('click', () => location.reload());
+</script>
+</body>
+</html>
