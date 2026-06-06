@@ -7,6 +7,13 @@ patient data is transmitted. Being rebuilt as a Vite + TypeScript sister tool to
 cvai-tools, deploying to `churn.thecranialdoc.com` as a The Cranial Doc brand
 surface with a calibrated email/podcast/course funnel.
 
+## Deployment
+- **Platform:** Cloudflare Pages → `churn.thecranialdoc.com` (sister to cvai-tools).
+- **Build:** `npm run build` · **Output:** `dist` · **Node:** 20 (`.nvmrc`).
+- Security headers + CSP (self-only) + cache rules ship via `public/_headers`
+  (copied to `dist/_headers` at build). Production branch: `master` (auto-deploy).
+- Full steps + post-deploy verification: see `DEPLOY.md`.
+
 ## Design System
 Always read DESIGN.md before making any visual or UI decisions. All font
 choices, colors, spacing, and aesthetic direction are defined there ("Clinical
