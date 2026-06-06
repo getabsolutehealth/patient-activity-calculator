@@ -8,11 +8,13 @@ export default defineConfig({
     },
   },
   test: {
-    // happy-dom gives us localStorage / Storage / window for the practice-info
-    // and state tests. Pure-math tests in calc.test.ts don't touch the DOM but
-    // run fine under happy-dom (~1ms overhead per file).
+    // Unit tests live in src/. The Playwright e2e specs in e2e/ run under
+    // `npm run e2e`, NOT vitest — scope vitest to src so it doesn't try to
+    // collect (and choke on) the @playwright/test imports.
+    include: ["src/**/*.test.ts"],
+    // happy-dom gives the state/component tests a DOM; the pure-math calc
+    // tests run fine under it too (~1ms overhead per file).
     environment: "happy-dom",
-    // Reset localStorage between tests so practice-info tests don't bleed state.
     clearMocks: true,
     restoreMocks: true,
   },
