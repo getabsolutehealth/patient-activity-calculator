@@ -18,12 +18,11 @@ const NAME_ONLY: ColumnMapping = {
   firstName: 0,
   lastName: 1,
   fullName: -1,
-  dob: -1,
   patientId: -1,
 };
 
-function patient(first: string, last: string, dob = "", id = ""): Patient {
-  return { first, last, dob, id };
+function patient(first: string, last: string, id = ""): Patient {
+  return { first, last, id };
 }
 
 describe("parseCSV", () => {
@@ -70,14 +69,23 @@ describe("parseCSV", () => {
 
 describe("autoDetectColumns", () => {
   it("detects first/last by common header names (case-insensitive)", () => {
-    const m = autoDetectColumns(["FIRST NAME", "Last Name", "DOB"]);
+    const m = autoDetectColumns(["FIRST NAME", "Last Name"]);
     expect(m.firstName).toBe(0);
     expect(m.lastName).toBe(1);
-    expect(m.dob).toBe(2);
+  });
+
+  it("auto-detects a patient-level ID column", () => {
+    const m = autoDetectColumns(["First Name", "Last Name", "Chart #"]);
+    expect(m.patientId).toBe(2);
+  });
+
+  it("does NOT auto-detect a generic 'id' or 'account' column (could be a visit id)", () => {
+    expect(autoDetectColumns(["First Name", "Last Name", "ID"]).patientId).toBe(-1);
+    expect(autoDetectColumns(["First Name", "Last Name", "Account #"]).patientId).toBe(-1);
   });
 
   it("falls back to a full-name column when first/last are absent", () => {
-    const m = autoDetectColumns(["Patient Name", "Chart #"]);
+    const m = autoDetectColumns(["Patient Name", "Chart Number"]);
     expect(m.fullName).toBe(0);
     expect(m.patientId).toBe(1);
   });
@@ -103,7 +111,7 @@ describe("extractPatients", () => {
   });
 
   it("splits a 'Last, First' full-name column", () => {
-    const parsed = parseCSV("Name\n\"Smith, John\"");
+    const parsed = parseCSV('Name\n"Smith, John"');
     const m = autoDetectColumns(parsed.headers);
     const out = extractPatients(parsed, m);
     expect(out[0]).toMatchObject({ first: "John", last: "Smith" });
@@ -115,18 +123,21 @@ describe("extractPatients", () => {
     const out = extractPatients(parsed, m);
     expect(out[0]).toMatchObject({ first: "John Adams", last: "Smith" });
   });
+
+  it("reads a Patient ID when mapped", () => {
+    const parsed = parseCSV("First Name,Last Name,Chart #\nJohn,Smith,MRN-9");
+    const m = autoDetectColumns(parsed.headers);
+    expect(extractPatients(parsed, m)[0]).toMatchObject({ id: "MRN-9" });
+  });
 });
 
 describe("resolveKeyMode", () => {
   it("uses id only when both files map it", () => {
-    expect(resolveKeyMode({ id: true, dob: false }, { id: true, dob: false })).toBe("id");
-    expect(resolveKeyMode({ id: true, dob: false }, { id: false, dob: false })).toBe("name");
-  });
-  it("uses name-dob when both map dob (and not both id)", () => {
-    expect(resolveKeyMode({ id: false, dob: true }, { id: false, dob: true })).toBe("name-dob");
+    expect(resolveKeyMode({ id: true }, { id: true })).toBe("id");
+    expect(resolveKeyMode({ id: true }, { id: false })).toBe("name");
   });
   it("falls back to name", () => {
-    expect(resolveKeyMode({ id: false, dob: false }, { id: false, dob: false })).toBe("name");
+    expect(resolveKeyMode({ id: false }, { id: false })).toBe("name");
   });
 });
 
@@ -134,14 +145,11 @@ describe("keyOf", () => {
   it("normalizes case and whitespace", () => {
     expect(keyOf(patient(" John ", "SMITH"), "name")).toBe("n:john|smith");
   });
-  it("distinguishes twins by dob", () => {
-    const a = patient("Sam", "Lee", "2020-01-01");
-    const b = patient("Sam", "Lee", "2018-05-05");
-    expect(keyOf(a, "name-dob")).not.toBe(keyOf(b, "name-dob"));
-    expect(keyOf(a, "name")).toBe(keyOf(b, "name")); // collide without dob
-  });
-  it("uses id when in id mode", () => {
-    expect(keyOf(patient("X", "Y", "", "MRN-9"), "id")).toBe("id:mrn-9");
+  it("matches by id when in id mode (ignores name differences)", () => {
+    const a = patient("Robert", "Lee", "MRN-1");
+    const b = patient("Bob", "Lee", "MRN-1"); // same person, nickname
+    expect(keyOf(a, "id")).toBe(keyOf(b, "id"));
+    expect(keyOf(a, "name")).not.toBe(keyOf(b, "name"));
   });
 });
 
@@ -159,8 +167,7 @@ describe("computeStats", () => {
   });
 
   it("churn = inactive / prior unique total", () => {
-    const s = computeStats(prior, current, "name");
-    expect(s.churnPct).toBeCloseTo((1 / 3) * 100, 5);
+    expect(computeStats(prior, current, "name").churnPct).toBeCloseTo((1 / 3) * 100, 5);
   });
 
   it("momentum = new - inactive", () => {
@@ -171,9 +178,31 @@ describe("computeStats", () => {
     expect(computeStats([], current, "name").churnPct).toBeNull();
   });
 
-  it("dedups repeated rows within a file (counts unique patients, not visits)", () => {
-    const dupCurrent = [patient("Jane", "Doe"), patient("Jane", "Doe"), patient("Amy", "New")];
-    expect(computeStats(prior, dupCurrent, "name").activeCount).toBe(2);
+  it("dedups repeated rows (counts unique patients, not visits) — by id", () => {
+    // One patient seen 3 times this month (visit-level export) → one active patient.
+    const visits = [
+      patient("Jane", "Doe", "P1"),
+      patient("Jane", "Doe", "P1"),
+      patient("Jane", "Doe", "P1"),
+      patient("Amy", "New", "P2"),
+    ];
+    const priorById = [patient("Jane", "Doe", "P1"), patient("Gus", "Old", "P9")];
+    const s = computeStats(priorById, visits, "id");
+    expect(s.activeCount).toBe(2); // P1, P2 — not 4 visit rows
+    expect(s.inactiveCount).toBe(1); // P9 dropped
+    expect(s.newCount).toBe(1); // P2
+  });
+
+  it("id matching survives a name change (same id)", () => {
+    const before = [patient("Mary", "Jones", "P1")];
+    const after = [patient("Mary", "Smith", "P1")]; // married name
+    const s = computeStats(before, after, "id");
+    expect(s.inactiveCount).toBe(0);
+    expect(s.newCount).toBe(0);
+    // name mode would wrongly count her as 1 inactive + 1 new:
+    const wrong = computeStats(before, after, "name");
+    expect(wrong.inactiveCount).toBe(1);
+    expect(wrong.newCount).toBe(1);
   });
 
   it("flags identical files", () => {
@@ -185,12 +214,6 @@ describe("computeStats", () => {
     const s = computeStats(prior, [...prior, patient("Amy", "New")], "name");
     expect(s.inactiveCount).toBe(0);
     expect(s.churnPct).toBe(0);
-  });
-
-  it("twins counted separately in name-dob mode", () => {
-    const p = [patient("Sam", "Lee", "2020-01-01"), patient("Sam", "Lee", "2018-05-05")];
-    expect(computeStats(p, p, "name-dob").activeCount).toBe(2);
-    expect(computeStats(p, p, "name").activeCount).toBe(1);
   });
 });
 
@@ -207,20 +230,20 @@ describe("formatName / byName", () => {
 
 describe("toCSV", () => {
   it("quotes fields and escapes embedded quotes", () => {
-    const csv = toCSV([patient("O\"Brien", "Smith")]);
+    const csv = toCSV([patient('O"Brien', "Smith")]);
     expect(csv).toContain('"O""Brien"');
   });
 
   it("neutralizes formula-injection cells", () => {
     const csv = toCSV([patient("=cmd", "Smith")]);
     // formatName title-cases first, then the leading '=' is neutralized with a quote.
-    expect(csv).toContain('"\'=Cmd"'); // leading apostrophe inside the quoted field
+    expect(csv).toContain('"\'=Cmd"');
   });
 
-  it("adds DOB / Patient ID columns only when present", () => {
+  it("adds a Patient ID column only when present", () => {
     expect(toCSV([patient("A", "B")]).split("\r\n")[0]).toBe('"First Name","Last Name"');
-    const withDob = toCSV([patient("A", "B", "2020-01-01")]);
-    expect(withDob.split("\r\n")[0]).toBe('"First Name","Last Name","Date of Birth"');
+    const withId = toCSV([patient("A", "B", "P1")]);
+    expect(withId.split("\r\n")[0]).toBe('"First Name","Last Name","Patient ID"');
   });
 
   it("title-cases exported names", () => {

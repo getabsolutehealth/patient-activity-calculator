@@ -14,12 +14,18 @@
  *                                  │
  *               toCSV(patients) ──▶ download blob text
  *
- * Patient matching (eng review 2026-06-06): a name-only key mis-counts twins,
- * duplicate names, and name changes. Match-key precedence, decided once across
- * BOTH files so keys are comparable:
- *   - "id"        : Patient ID column mapped in both files  (most reliable)
- *   - "name-dob"  : first + last + DOB                      (disambiguates twins)
- *   - "name"      : first + last                            (universal fallback)
+ * Patient matching: a name-only key mis-counts duplicate names and name
+ * changes. Match-key precedence, decided once across BOTH files so keys are
+ * comparable:
+ *   - "id"   : Patient ID column mapped in both files  (most reliable)
+ *   - "name" : first + last                            (universal fallback)
+ *
+ * Patient ID is the realistic secondary for adjustment exports (they carry a
+ * chart/patient number, not DOB). Auto-detection of the ID column is
+ * deliberately conservative — only headers that clearly mean a PATIENT-level id
+ * (Patient ID / Chart # / MRN), never a generic "id"/"account" that might be a
+ * per-visit or invoice id. Matching on a per-visit id would make every visit
+ * look like a different person. The user can still map any column by hand.
  */
 
 // -----------------------------------------------------------------------------
@@ -106,8 +112,6 @@ export interface ColumnMapping {
   lastName: number;
   /** Index of a single "Full Name" column, or -1 if using first/last. */
   fullName: number;
-  /** Optional DOB column index, or -1. */
-  dob: number;
   /** Optional Patient ID column index, or -1. */
   patientId: number;
 }
@@ -115,17 +119,19 @@ export interface ColumnMapping {
 const FIRST_CANDIDATES = ["first name", "firstname", "first", "fname", "given name"];
 const LAST_CANDIDATES = ["last name", "lastname", "last", "lname", "surname", "family name"];
 const FULL_CANDIDATES = ["patient name", "full name", "name", "patient"];
-const DOB_CANDIDATES = ["dob", "date of birth", "birth date", "birthdate", "d.o.b."];
+// Conservative — patient-level identifiers ONLY. NOT generic "id"/"account",
+// which could be a per-visit/invoice id that would shatter matching.
 const ID_CANDIDATES = [
   "patient id",
   "patientid",
-  "id",
+  "patient #",
+  "patient number",
   "chart",
   "chart number",
   "chart #",
+  "chart id",
   "mrn",
-  "account",
-  "account number",
+  "medical record number",
 ];
 
 function findHeader(headers: string[], candidates: string[]): number {
@@ -153,7 +159,6 @@ export function autoDetectColumns(headers: string[]): ColumnMapping {
     firstName,
     lastName,
     fullName,
-    dob: findHeader(headers, DOB_CANDIDATES),
     patientId: findHeader(headers, ID_CANDIDATES),
   };
 }
@@ -169,7 +174,6 @@ export function isMappingUsable(m: ColumnMapping): boolean {
 export interface Patient {
   first: string;
   last: string;
-  dob: string;
   id: string;
 }
 
@@ -209,9 +213,8 @@ export function extractPatients(parsed: ParsedCsv, m: ColumnMapping): Patient[] 
       last = cell(row, m.lastName);
     }
     const id = cell(row, m.patientId);
-    const dob = cell(row, m.dob);
     if (first === "" && last === "" && id === "") continue; // nothing to identify
-    out.push({ first, last, dob, id });
+    out.push({ first, last, id });
   }
   return out;
 }
@@ -219,7 +222,7 @@ export function extractPatients(parsed: ParsedCsv, m: ColumnMapping): Patient[] 
 // -----------------------------------------------------------------------------
 // Matching + stats
 
-export type KeyMode = "id" | "name-dob" | "name";
+export type KeyMode = "id" | "name";
 
 function norm(s: string): string {
   return s.trim().toLowerCase();
@@ -228,14 +231,13 @@ function norm(s: string): string {
 /**
  * Choose the strongest key mode usable across BOTH files. Mixing key schemes
  * between files would make every patient look new/inactive, so the decision is
- * made once. `mapped` reflects which optional columns the user mapped per file.
+ * made once: match by Patient ID only when both files map it; otherwise name.
  */
 export function resolveKeyMode(
-  priorMapped: { id: boolean; dob: boolean },
-  currentMapped: { id: boolean; dob: boolean },
+  priorMapped: { id: boolean },
+  currentMapped: { id: boolean },
 ): KeyMode {
   if (priorMapped.id && currentMapped.id) return "id";
-  if (priorMapped.dob && currentMapped.dob) return "name-dob";
   return "name";
 }
 
@@ -243,8 +245,6 @@ export function keyOf(p: Patient, mode: KeyMode): string {
   switch (mode) {
     case "id":
       return `id:${norm(p.id)}`;
-    case "name-dob":
-      return `nd:${norm(p.first)}|${norm(p.last)}|${norm(p.dob)}`;
     case "name":
       return `n:${norm(p.first)}|${norm(p.last)}`;
   }
@@ -349,15 +349,12 @@ function csvField(value: string): string {
  */
 export function toCSV(patients: Patient[]): string {
   const hasId = patients.some((p) => p.id !== "");
-  const hasDob = patients.some((p) => p.dob !== "");
   const header = ["First Name", "Last Name"];
-  if (hasDob) header.push("Date of Birth");
   if (hasId) header.push("Patient ID");
 
   const lines = [header.map(csvField).join(",")];
   for (const p of patients) {
     const fields = [formatName(p.first), formatName(p.last)];
-    if (hasDob) fields.push(p.dob);
     if (hasId) fields.push(p.id);
     lines.push(fields.map(csvField).join(","));
   }

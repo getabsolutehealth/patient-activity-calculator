@@ -66,8 +66,7 @@ function pickers(slot: SlotId, mapping: ColumnMapping, headers: string[], deps: 
     { class: "col-pickers" },
     columnSelect("First name", headers, mapping.firstName, false, (i) => setName("firstName", i)),
     columnSelect("Last name", headers, mapping.lastName, false, (i) => setName("lastName", i)),
-    columnSelect("Date of birth (optional)", headers, mapping.dob, true, (i) => set("dob", i)),
-    columnSelect("Patient ID (optional)", headers, mapping.patientId, true, (i) =>
+    columnSelect("Patient ID (optional, most accurate)", headers, mapping.patientId, true, (i) =>
       set("patientId", i),
     ),
   );

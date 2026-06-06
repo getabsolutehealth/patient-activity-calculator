@@ -85,7 +85,7 @@ describe("reduce — run + results invalidation", () => {
     const s = reduce(initialState(), {
       type: "set-column",
       slot: "A",
-      field: "dob",
+      field: "patientId",
       index: 2,
     });
     expect(s.slotA.status).toBe("empty");
@@ -97,12 +97,14 @@ describe("reduce — run + results invalidation", () => {
     expect(s.results).toBeNull();
   });
 
-  it("mapping a DOB column on both files switches matching to name+dob", () => {
-    const twins = "First Name,Last Name,DOB\nSam,Lee,2020-01-01\nSam,Lee,2018-05-05";
-    let s = load(initialState(), "A", twins);
-    s = load(s, "B", twins);
-    // DOB auto-detected → both slots map dob → name-dob mode → twins kept separate
+  it("auto-detects a Patient ID column → matches by id (survives a name change)", () => {
+    const before = "First Name,Last Name,Chart #\nMary,Jones,P1\nGus,Old,P9";
+    const after = "First Name,Last Name,Chart #\nMary,Smith,P1"; // P1 married name; P9 dropped
+    let s = load(initialState(), "A", before);
+    s = load(s, "B", after);
     const ran = reduce(s, { type: "run" });
-    expect(ran.results?.activeCount).toBe(2);
+    // id mode: P1 stays active despite the name change; P9 is the only inactive.
+    expect(ran.results?.inactiveCount).toBe(1);
+    expect(ran.results?.newCount).toBe(0);
   });
 });

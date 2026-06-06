@@ -117,8 +117,8 @@ export function reduce(state: AppState, action: Action): AppState {
       const a = state.slotA as Extract<FileSlot, { status: "loaded" }>;
       const b = state.slotB as Extract<FileSlot, { status: "loaded" }>;
       const mode = resolveKeyMode(
-        { id: a.mapping.patientId !== -1, dob: a.mapping.dob !== -1 },
-        { id: b.mapping.patientId !== -1, dob: b.mapping.dob !== -1 },
+        { id: a.mapping.patientId !== -1 },
+        { id: b.mapping.patientId !== -1 },
       );
       const results = computeStats(
         extractPatients(a.parsed, a.mapping),

@@ -139,10 +139,13 @@ feature, not a fallback.
 | **Upload card** | After file pick: card shows a brief "Reading…" with the filename, mono row-count appears when parsed. | No file: dashed card, icon, "Select CSV file" + month hint. | Inline per-card error state (red border + specific message): non-CSV → "That's not a CSV"; empty/<2 rows → "No rows we can read in this file"; no name columns found → "Couldn't find name columns — pick them below" (reveals the column pickers); FileReader failure → same inline error (never a silent hang). | One file loaded: that card shows loaded state; Run stays disabled with helper text "Add the second month to run." |
 
 **Column pickers (per file):** First Name + Last Name (or a single Full Name
-column), an **optional Date of Birth** column, and an **optional Patient ID**
-column. Match-key precedence: Patient ID if set → else first+last+DOB if DOB set →
-else name-only. DOB/ID disambiguate twins and duplicate names. Changing any mapping
-after results invalidates the results (per-file-slot reducer).
+column) and an **optional Patient ID** column. Match-key precedence: Patient ID
+if mapped in both files → else name-only. Patient ID (chart/MRN) is the realistic
+secondary for adjustment exports — it survives name changes and, because results
+dedupe by the match key, collapses a visit-level export (many rows per patient)
+to unique patients. ID auto-detection is conservative (Patient ID / Chart # / MRN
+only — never a generic "id"/"account" that could be a per-visit id). Changing any
+mapping after results invalidates the results (per-file-slot reducer).
 | **Run Analysis** | Disabled until BOTH files parse valid. On click: instant client-side calc + results reveal (short upward fade), no fake spinner. | — | If a column pick yields zero usable rows, surface inline on the offending card, do not run. | — |
 | **Results / stats** | — | Zero inactive → warm line "No patients dropped off this month — 100% retention." Zero new → neutral "No new patients this month." Both files identical → gentle banner "These two files look identical — did you mean to compare different months?" | — | — |
 | **Export panel** | — | Empty list → "No patients" (muted, italic), download button disabled. | — | >100 rows → "showing 100 of N — download CSV for the full list." |
