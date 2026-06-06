@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+.vite/
+*.tsbuildinfo
+
+# generated content
+src/generated/
+
+# env / secrets
+.env
+.env.local
+.env.*.local
+
+# editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+npm-debug.log*
+
+# gstack working state (project plans live in ~/.gstack, this is just local audit)
+.gstack/
+
+# local-only artifacts (legacy decoded PDFs + preview-PDF output dir)
+_*.pdf
+_*.png
+_*/
+
+# cloudflare local cache
+.wrangler/

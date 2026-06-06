@@ -1,0 +1,29 @@
+{
+  "name": "patient-activity-calculator",
+  "private": true,
+  "version": "2.0.0-pre",
+  "type": "module",
+  "description": "Patient Activity Calculator — churn.thecranialdoc.com",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "happy-dom": "^20.9.0",
+    "typescript": "~5.7.3",
+    "vite": "^5.4.14",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": {
+    "@fontsource/dm-sans": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
