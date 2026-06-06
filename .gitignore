@@ -37,3 +37,9 @@ _*/
 
 # cloudflare local cache
 .wrangler/
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+.playwright/
