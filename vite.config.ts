@@ -9,13 +9,9 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
-    sourcemap: true,
-    // 100 KB budget applies to the initial entry chunk (the page-load cost).
-    // The lazily-imported pdf-generator chunk is large by design — pdf-lib +
-    // fontkit weigh in around 500 KB gzipped — and only fetches when the DC
-    // clicks Download. Raising this limit just suppresses the false-positive
-    // warning on that lazy chunk; the entry chunk is still measured at
-    // build time and currently sits ~10 KB gzip.
-    chunkSizeWarningLimit: 1200,
+    // No source maps in the published build — don't ship the TS source as a
+    // public .map alongside a PHI-handling tool. Flip to true locally if you
+    // need to debug a production stack trace.
+    sourcemap: false,
   },
 });

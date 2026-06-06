@@ -28,10 +28,13 @@ function downloadCsv(rows: Patient[], prefix: string): void {
     .toLocaleDateString("en-US", { year: "numeric", month: "2-digit", day: "2-digit" })
     .replace(/\//g, "-");
   const blob = new Blob([toCSV(rows)], { type: "text/csv;charset=utf-8" });
-  const a = el("a", { href: URL.createObjectURL(blob), download: `${prefix}_${stamp}.csv` });
+  const url = URL.createObjectURL(blob);
+  const a = el("a", { href: url, download: `${prefix}_${stamp}.csv` });
   document.body.append(a);
   a.click();
   a.remove();
+  // Release the in-memory blob (which holds patient data) once the save fires.
+  URL.revokeObjectURL(url);
 }
 
 function statCard(value: string, label: string, sub: string, tone: string): HTMLElement {
