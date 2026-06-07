@@ -184,8 +184,14 @@ mapping after results invalidates the results (per-file-slot reducer).
 - **Header band:** "Join the list" email CTA (primary) + a Podcast link.
 - **Hero:** tool-focused; one soft course line (eyebrow or single sentence). The
   tool is the star — no course promo card.
-- **Post-results card:** email + podcast with equal billing, shown after the
-  user gets value.
+- **Post-results CTA band (BUILT):** bold graphite band rendered right after the
+  export panels, before "Start over" — the value moment. It's the only dark/warm
+  block below the results, so it can't be glance-past (the original gap: the
+  funnel only lived in the banner-blind header + the rarely-scrolled footer).
+  Punchy, tool-forward copy serving two audiences from one band: the teal
+  "Join the list" button (loudest element) earns the colleague-forwarded
+  visitor; the quieter "Listen to the podcast" link is the fresh thing for
+  someone already on the list. Each action carries a one-line subtitle.
 - **Footer band:** all three offers (email, podcast, Foundations) + privacy.
 - **Email link-out target:** `thecranialdoc.com` homepage. The homepage already
   IS a capture page (first-name+email form above the fold, plus a second capture

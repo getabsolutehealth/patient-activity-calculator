@@ -26,6 +26,14 @@ Targets `churn.thecranialdoc.com`.
 - **Funnel** — `marketing.ts` single source of truth: email "Join the list" →
   thecranialdoc.com, podcast, and a soft Foundations course touch. Link-outs
   only; no on-page form, no patient data transmitted.
+- **Value-moment CTA band** — a bold graphite band rendered right after the
+  export panels (before "Start over"), the high-intent placement DESIGN.md
+  specified but the first build skipped. The funnel previously lived only in the
+  banner-blind header and rarely-scrolled footer. Punchy, tool-forward copy
+  serves both audiences from one band: the teal "Join the list" button (loudest
+  element) earns the colleague-forwarded visitor; the quieter "Listen to the
+  podcast" link is the fresh thing for someone already on the list. Copy in
+  `marketing.ts`; mobile-stacked with ≥44px targets.
 - **Privacy/PHI** — `LOCAL ONLY` badge + footer disclaimer; documented
   no-third-party-runtime invariant (CSP-enforced).
 - **Tests** — 47 vitest unit tests (calc + reducer) and 2 Playwright e2e tests
