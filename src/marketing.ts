@@ -41,6 +41,19 @@ export const MARKETING = {
     subtitle:
       "Upload two monthly adjustment exports to see active patients, inactives, churn, new conversions, and net momentum — with one-click CSV downloads.",
   },
+  // Value-moment CTA — the graphite band rendered right after the results,
+  // before "Start over" (peak goodwill). Punchy, tool-forward voice. Serves
+  // two audiences from one band without knowing who's who: the email line
+  // earns the colleague-forwarded visitor (here's a source worth joining);
+  // the podcast line is the fresh thing for someone already on the list.
+  cta: {
+    title: "Get the next tool first",
+    lead: "Free practice tools like this, straight from The Cranial Doc — the moment they ship.",
+    emailCta: "Join the list",
+    emailSub: "New tools the moment they drop.",
+    podcastCta: "Listen to the podcast",
+    podcastSub: "The cases and systems behind the numbers.",
+  },
   privacy: {
     badge: "LOCAL ONLY",
     disclaimer:

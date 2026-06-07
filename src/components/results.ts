@@ -8,6 +8,7 @@
 
 import { type Patient, type Stats, formatName, toCSV } from "../calc";
 import { el } from "../dom";
+import { MARKETING } from "../marketing";
 import { type Action, type AppState } from "../state";
 
 import "./results.css";
@@ -176,8 +177,67 @@ function render(stats: Stats, dispatch: (a: Action) => void): HTMLElement {
       ),
     );
   }
-  children.push(hero, supporting, panels, el("div", { class: "reset-wrap" }, resetBtn));
+  children.push(
+    hero,
+    supporting,
+    panels,
+    ctaBand(),
+    el("div", { class: "reset-wrap" }, resetBtn),
+  );
   return el("div", { class: "results__inner" }, ...children);
+}
+
+/**
+ * Value-moment funnel band — the one CTA placement that converts, rendered at
+ * peak goodwill (after the export panels, before "Start over"). Bold graphite
+ * band so it's the only warm/dark block below the results and impossible to
+ * glance past. Email is the loud teal button; podcast is the quieter second
+ * action. Copy lives in MARKETING.cta. Link-outs only — no PHI in any URL.
+ */
+function ctaBand(): HTMLElement {
+  const action = (
+    href: string,
+    label: string,
+    sub: string,
+    cls: string,
+  ): HTMLElement =>
+    el(
+      "div",
+      { class: "results__cta-action" },
+      el(
+        "a",
+        { href, class: cls, target: "_blank", rel: "noopener noreferrer" },
+        `${label} →`,
+      ),
+      el("span", { class: "results__cta-sub" }, sub),
+    );
+
+  return el(
+    "aside",
+    { class: "results__cta", "aria-label": "More from The Cranial Doc" },
+    el(
+      "div",
+      { class: "results__cta-copy" },
+      el("p", { class: "results__cta-title" }, MARKETING.cta.title),
+      el("p", { class: "results__cta-lead" }, MARKETING.cta.lead),
+    ),
+    el(
+      "div",
+      { class: "results__cta-actions" },
+      action(
+        MARKETING.email.url,
+        MARKETING.cta.emailCta,
+        MARKETING.cta.emailSub,
+        "results__cta-btn",
+      ),
+      action(
+        MARKETING.podcast.url,
+        MARKETING.cta.podcastCta,
+        MARKETING.cta.podcastSub,
+        "results__cta-link",
+      ),
+    ),
+  );
 }
 
 export function createResults(dispatch: (a: Action) => void): {
